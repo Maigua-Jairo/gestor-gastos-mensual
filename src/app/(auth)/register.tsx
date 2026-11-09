@@ -1,0 +1,77 @@
+import React, { useState } from 'react';
+import { Text, View, TextInput, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { supabase } from '../../lib/supabase';
+import { Link, useRouter } from 'expo-router';
+
+export default function RegisterScreen() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+
+  const handleRegister = async () => {
+    if (!email || !password) {
+      Alert.alert('Error', 'Por favor llena todos los campos.');
+      return;
+    }
+    setLoading(true);
+    const { error } = await supabase.auth.signUp({ email, password });
+    setLoading(false);
+
+    if (error) {
+      Alert.alert('Error en Registro', error.message);
+    } else {
+      Alert.alert(
+        '¡Registro Exitoso!',
+        'Cuenta creada correctamente. Ya puedes iniciar sesión.',
+        [{ text: 'OK', onPress: () => router.replace('/(auth)/login') }]
+      );
+    }
+  };
+
+  return (
+    <View className="flex-1 justify-center bg-stone-950 px-6">
+      <View className="mb-8">
+        <Text className="text-3xl font-bold text-amber-400">Crear Cuenta</Text>
+        <Text className="text-sm text-stone-400 mt-1">Registra tu correo institucional o personal</Text>
+      </View>
+
+      <View className="space-y-4">
+        <TextInput
+          className="bg-stone-900 border border-stone-800 text-stone-100 px-4 py-3 rounded-xl mb-4"
+          placeholder="Correo electrónico"
+          placeholderTextColor="#78716c"
+          value={email}
+          onChangeText={setEmail}
+          autoCapitalize="none"
+          keyboardType="email-address"
+        />
+
+        <TextInput
+          className="bg-stone-900 border border-stone-800 text-stone-100 px-4 py-3 rounded-xl mb-6"
+          placeholder="Contraseña (mínimo 6 caracteres)"
+          placeholderTextColor="#78716c"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+        />
+
+        <TouchableOpacity
+          onPress={handleRegister}
+          disabled={loading}
+          className="bg-amber-500 py-3.5 rounded-xl items-center shadow-lg active:bg-amber-600 mb-6"
+        >
+          {loading ? (
+            <ActivityIndicator color="#0f172a" />
+          ) : (
+            <Text className="text-stone-950 font-bold text-base">Registrarse</Text>
+          )}
+        </TouchableOpacity>
+
+        <Link href="/(auth)/login" className="text-center text-stone-400">
+          ¿Ya tienes cuenta? <Text className="text-amber-400 font-bold">Inicia sesión</Text>
+        </Link>
+      </View>
+    </View>
+  );
+}
