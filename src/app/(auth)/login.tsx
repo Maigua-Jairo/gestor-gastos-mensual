@@ -21,12 +21,19 @@ export default function LoginScreen() {
     if (error) Alert.alert('Error de Autenticación', error.message);
   };
 
-  const handleGoogleLogin = async () => {
-    setGoogleLoading(true);
+const handleGoogleLogin = async () => {
+  setGoogleLoading(true);
+  try {
     await signInWithGoogle();
+  } catch (e) {
+    Alert.alert(
+      'Error con Google',
+      e instanceof Error ? e.message : 'Intenta de nuevo.'
+    );
+  } finally {
     setGoogleLoading(false);
-  };
-
+  }
+};
   return (
     <View className="flex-1 justify-center bg-stone-950 px-6">
       <View className="mb-8">

@@ -1,43 +1,46 @@
-import { Alert, Platform } from 'react-native';
-import * as Linking from 'expo-linking';
-import * as QueryParams from 'expo-auth-session/build/QueryParams';
 import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
 import { supabase } from './supabase';
 
-const redirectTo = Linking.createURL('auth/callback');
-export async function completeGoogleOAuth(url: string): Promise<void> {
-  const { params, errorCode } = QueryParams.getQueryParams(url);
-  const oauthError = params.error_description || params.error || errorCode;
+WebBrowser.maybeCompleteAuthSession();
 
-  if (oauthError) {
-    throw new Error(oauthError);
-  }
+let lastCode: string | null = null;
 
-  if (params.code) {
-    const { error } = await supabase.auth.exchangeCodeForSession(params.code);
+export async function createSessionFromUrl(url: string) {
+  const { queryParams } = Linking.parse(url);
+  const code = queryParams?.code;
+  console.log('[AUTH] procesando URL:', url);
+  if (typeof code === 'string') {
+    if (code === lastCode) return;
+    lastCode = code;
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (error) throw error;
     return;
   }
-
-  if (params.access_token && params.refresh_token) {
-    const { error } = await supabase.auth.setSession({
-      access_token: params.access_token,
-      refresh_token: params.refresh_token,
-    });
-    if (error) throw error;
-    return;
+const { data: s } = await supabase.auth.getSession();
+console.log('[AUTH] sesión activa:', !!s.session);
+  // Respaldo por si devuelve tokens en el fragmento
+  const fragment = url.split('#')[1];
+  if (fragment) {
+    const params = new URLSearchParams(fragment);
+    const access_token = params.get('access_token');
+    const refresh_token = params.get('refresh_token');
+    if (access_token && refresh_token) {
+      const { error } = await supabase.auth.setSession({ access_token, refresh_token });
+      if (error) throw error;
+    }
   }
-
-  throw new Error('Google no devolvió los datos necesarios para iniciar sesión.');
 }
 
-export async function signInWithGoogle(): Promise<void> {
+export async function signInWithGoogle() {
   try {
+    const redirectTo = Linking.createURL('/auth/callback');
+
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo,
-        skipBrowserRedirect: Platform.OS !== 'web',
+        skipBrowserRedirect: true,
         queryParams: {
           prompt: 'select_account',
         },
@@ -45,19 +48,20 @@ export async function signInWithGoogle(): Promise<void> {
     });
 
     if (error) throw error;
-    if (!data.url) {
-      throw new Error('No se pudo generar la URL de Google.');
-    }
+    if (!data.url) throw new Error('Supabase no devolvió la URL de Google');
 
-    if (Platform.OS === 'web') {
-      return;
+    // Abre el navegador OAuth
+const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+console.log('[AUTH] resultado del navegador:', result.type, 'url' in result ? result.url : '');
+    // Si el navegador devuelve la URL de éxito directamente, la procesamos
+    if (result && result.type === 'success' && result.url) {
+      await createSessionFromUrl(result.url);
     }
-
-    await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
-  } catch (error: unknown) {
-    const message = error instanceof Error
-      ? error.message
-      : 'Ocurrió un error al iniciar sesión con Google.';
-    Alert.alert('Error de Autenticación', message);
+  } catch (error: any) {
+    throw new Error(error.message || 'Ocurrió un error al iniciar sesión con Google.');
   }
+}
+
+function utilsVerifyResult(result: any) {
+  return result;
 }

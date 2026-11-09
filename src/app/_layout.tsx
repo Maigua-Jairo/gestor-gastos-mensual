@@ -1,13 +1,12 @@
-import "../../global.css";
+import '../../global.css';
 import { Slot } from 'expo-router';
-import { AuthProvider } from '../provider/AuthProvider';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { AuthProvider } from '../provider/AuthProvider';
 
-// Instancia global del cliente de caché de TanStack Query
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutos de caché por defecto
+      staleTime: 1000 * 60 * 5,
       retry: 2,
     },
   },

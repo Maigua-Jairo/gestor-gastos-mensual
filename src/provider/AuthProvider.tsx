@@ -2,6 +2,8 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { useRouter, useSegments } from 'expo-router';
+import * as Linking from 'expo-linking';
+import { createSessionFromUrl } from '../lib/auth';
 
 type AuthContextType = {
   session: Session | null;
@@ -20,35 +22,58 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    // 1. Obtener sesión inicial
+    // 1. Manejar deep links cuando la app recibe la redirección del navegador OAuth
+    const handleDeepLink = async (event: { url: string }) => {
+      try {
+        await createSessionFromUrl(event.url);
+      } catch (error) {
+        console.error('Error al procesar el deep link:', error);
+      }
+    };
+
+    const urlListener = Linking.addEventListener('url', handleDeepLink);
+
+    // 2. Verificar si la app se abrió inicialmente mediante una URL de redirección
+    Linking.getInitialURL().then(async (url) => {
+      if (url) {
+        try {
+          await createSessionFromUrl(url);
+        } catch (error) {
+          console.error('Error al procesar initial URL:', error);
+        }
+      }
+    });
+
+    // 3. Obtener sesión inicial
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setIsLoading(false);
     });
 
-    // 2. Escuchar cambios de autenticación (Login, Logout, Refresh)
+    // 4. Suscribirse a cambios de estado de autenticación en tiempo real
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       setIsLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      urlListener.remove();
+      subscription.unsubscribe();
+    };
   }, []);
 
-  // 3. Protección de rutas con Expo Router
+  // 5. Protección y redirección de rutas con Expo Router
   useEffect(() => {
     if (isLoading) return;
 
     const inAuthGroup = segments[0] === '(auth)';
 
     if (!session && !inAuthGroup) {
-      // Si no hay sesión y está fuera del grupo auth, redirigir al login
       router.replace('/(auth)/login');
     } else if (session && inAuthGroup) {
-      // Si ya está logueado y sigue en auth, mandar al dashboard principal
-      router.replace('/');
+      router.replace('/(main)');
     }
   }, [session, segments, isLoading]);
 

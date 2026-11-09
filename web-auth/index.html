@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="theme-color" content="#0c0a09" />
+    <title>Acceso seguro · Gestor de gastos</title>
+    <script>
+      if (window.location.pathname === "/" && !window.location.search && !window.location.hash) {
+        window.location.replace("/confirm");
+      }
+    </script>
+  </head>
+  <body class="min-w-[320px] bg-stone-950 text-stone-100">
+    <div id="app">
+      <main class="grid min-h-screen place-items-center px-5 py-12">
+        <p class="text-sm text-stone-400">Preparando el acceso seguro…</p>
+      </main>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
