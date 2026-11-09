@@ -6,6 +6,29 @@ WebBrowser.maybeCompleteAuthSession();
 
 let lastCode: string | null = null;
 
+export function getAuthRedirectUrl(path: '/confirm' | '/reset-password') {
+  const configuredUrl = process.env.EXPO_PUBLIC_AUTH_WEB_URL?.trim();
+  if (!configuredUrl) {
+    throw new Error('Falta configurar EXPO_PUBLIC_AUTH_WEB_URL con la URL del sitio de autenticación en Vercel.');
+  }
+
+  let baseUrl: URL;
+  try {
+    baseUrl = new URL(configuredUrl);
+  } catch {
+    throw new Error('EXPO_PUBLIC_AUTH_WEB_URL debe ser una URL válida del sitio de autenticación en Vercel.');
+  }
+
+  if (
+    baseUrl.protocol !== 'https:' &&
+    !(baseUrl.protocol === 'http:' && baseUrl.hostname === 'localhost')
+  ) {
+    throw new Error('EXPO_PUBLIC_AUTH_WEB_URL debe usar HTTPS.');
+  }
+
+  return new URL(path, baseUrl.origin).toString();
+}
+
 export async function createSessionFromUrl(url: string) {
   const { queryParams } = Linking.parse(url);
   const code = queryParams?.code;

@@ -85,6 +85,10 @@ const handleGoogleLogin = async () => {
           )}
         </TouchableOpacity>
 
+        <Link href="./forgot-password" className="text-center text-amber-400">
+          ¿Olvidaste tu contraseña?
+        </Link>
+
         <Link href="/(auth)/register" className="text-center text-stone-400">
           ¿No tienes cuenta? <Text className="text-amber-400 font-bold">Regístrate aquí</Text>
         </Link>

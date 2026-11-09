@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Text, View, TextInput, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { supabase } from '../../lib/supabase';
 import { Link, useRouter } from 'expo-router';
+import { getAuthRedirectUrl } from '../../lib/auth';
 
 export default function RegisterScreen() {
   const [email, setEmail] = useState('');
@@ -15,17 +16,28 @@ export default function RegisterScreen() {
       return;
     }
     setLoading(true);
-    const { error } = await supabase.auth.signUp({ email, password });
-    setLoading(false);
+    try {
+      const { error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          emailRedirectTo: getAuthRedirectUrl('/confirm'),
+        },
+      });
 
-    if (error) {
-      Alert.alert('Error en Registro', error.message);
-    } else {
+      if (error) throw error;
       Alert.alert(
-        '¡Registro Exitoso!',
-        'Cuenta creada correctamente. Ya puedes iniciar sesión.',
+        'Revisa tu correo',
+        'Te enviamos un enlace para confirmar tu cuenta. Al abrirlo, Vercel completará la confirmación.',
         [{ text: 'OK', onPress: () => router.replace('/(auth)/login') }]
       );
+    } catch (error) {
+      Alert.alert(
+        'Error en Registro',
+        error instanceof Error ? error.message : 'No se pudo crear la cuenta. Inténtalo de nuevo.'
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
