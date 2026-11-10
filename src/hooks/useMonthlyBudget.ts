@@ -5,6 +5,9 @@ import { useAuth } from '../provider/AuthProvider';
 export function useMonthlyBudget(year: number, month: number) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const previousDate = new Date(year, month - 2, 1);
+  const previousYear = previousDate.getFullYear();
+  const previousMonth = previousDate.getMonth() + 1;
 
   // 1. Obtener o verificar si existe el mes activo para el usuario
   const { data: activeMonth, isLoading: loadingMonth } = useQuery({
@@ -25,7 +28,53 @@ export function useMonthlyBudget(year: number, month: number) {
     enabled: !!user,
   });
 
-  // 2. Obtener el ingreso y los presupuestos de los 4 bloques si el mes existe
+  const {
+    data: previousBudgetData,
+    isLoading: loadingPreviousBudget,
+    error: previousBudgetError,
+  } = useQuery({
+    queryKey: ['previous_budget', previousYear, previousMonth, user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+
+      const { data: previousMonthRecord, error: monthError } = await supabase
+        .from('months')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('year', previousYear)
+        .eq('month', previousMonth)
+        .maybeSingle();
+
+      if (monthError) throw monthError;
+      if (!previousMonthRecord) return null;
+
+      const [incomeRes, budgetsRes] = await Promise.all([
+        supabase
+          .from('incomes')
+          .select('total_amount')
+          .eq('month_id', previousMonthRecord.id)
+          .maybeSingle(),
+        supabase
+          .from('budgets')
+          .select('block, allocated_amount')
+          .eq('month_id', previousMonthRecord.id),
+      ]);
+
+      if (incomeRes.error) throw incomeRes.error;
+      if (budgetsRes.error) throw budgetsRes.error;
+
+      const income = Number(incomeRes.data?.total_amount ?? 0);
+      if (income <= 0) return null;
+
+      return {
+        income,
+        budgets: (budgetsRes.data ?? []).filter((budget) => budget.block !== 'savings'),
+      };
+    },
+    enabled: !!user && !activeMonth,
+  });
+
+  // 2. Obtener el ingreso y presupuestos de gastos si existe el mes
   const { data: budgetData, isLoading: loadingBudgets } = useQuery({
     queryKey: ['budget_details', activeMonth?.id],
     queryFn: async () => {
@@ -39,16 +88,22 @@ export function useMonthlyBudget(year: number, month: number) {
 
       return {
         income: incomeRes.data?.total_amount || 0,
-        budgets: budgetsRes.data || [],
+        budgets: (budgetsRes.data || []).filter((budget) => budget.block !== 'savings'),
         expenses: expensesRes.data || [],
       };
     },
     enabled: !!activeMonth,
   });
 
-  // 3. Mutación para inicializar el mes, ingreso y los 4 bloques (incluyendo el 15% de ahorro sugerido)
+  // 3. Mutación para inicializar el mes, ingreso y los bloques de gastos
   const setupMonthMutation = useMutation({
-    mutationFn: async ({ totalIncome, allocations }: { totalIncome: number; allocations: { block: string; amount: number }[] }) => {
+    mutationFn: async ({
+      totalIncome,
+      allocations,
+    }: {
+      totalIncome: number;
+      allocations: { block: 'basic_needs' | 'personal_needs' | 'luxuries'; amount: number }[];
+    }) => {
       if (!user) throw new Error('No usuario autenticado');
 
       // A. Crear o asegurar el mes
@@ -82,6 +137,14 @@ export function useMonthlyBudget(year: number, month: number) {
         .upsert(budgetPayload, { onConflict: 'month_id,block' });
       if (budgetsError) throw budgetsError;
 
+      const { error: legacySavingsError } = await supabase
+        .from('budgets')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('month_id', monthId)
+        .eq('block', 'savings');
+      if (legacySavingsError) throw legacySavingsError;
+
       return monthId;
     },
     onSuccess: () => {
@@ -93,7 +156,9 @@ export function useMonthlyBudget(year: number, month: number) {
   return {
     activeMonth,
     budgetData,
-    isLoading: loadingMonth || loadingBudgets,
+    previousBudgetData,
+    previousBudgetError,
+    isLoading: loadingMonth || loadingBudgets || loadingPreviousBudget,
     setupMonth: setupMonthMutation.mutateAsync,
     isSettingUp: setupMonthMutation.isPending,
   };

@@ -3,6 +3,7 @@ import { ActivityIndicator, Text, View } from 'react-native';
 import * as Linking from 'expo-linking';
 import { Link, useRouter } from 'expo-router';
 import { createSessionFromUrl } from '../../../lib/auth';
+import { BackButton } from '../../../components/BackButton';
 
 export default function AuthCallbackScreen() {
   const url = Linking.useLinkingURL();
@@ -37,26 +38,29 @@ export default function AuthCallbackScreen() {
   const isProcessing = Boolean(url) && result?.url !== url;
 
   return (
-    <View className="flex-1 items-center justify-center bg-stone-950 px-6">
-      {isProcessing || !url ? (
-        <>
-          <ActivityIndicator size="large" color="#fbbf24" />
-          <Text className="mt-4 text-center text-stone-200">
-            Esperando la respuesta de Google...
+    <View className="flex-1 bg-stone-950 px-6">
+      <BackButton fallbackHref="/(auth)/login" />
+      <View className="flex-1 items-center justify-center">
+        {isProcessing || !url ? (
+          <>
+            <ActivityIndicator size="large" color="#fbbf24" />
+            <Text className="mt-4 text-center text-stone-200">
+              Esperando la respuesta de Google...
+            </Text>
+          </>
+        ) : error ? (
+          <>
+            <Text className="text-center text-stone-200">{error}</Text>
+            <Link href="/(auth)/login" className="mt-6 text-amber-400">
+              Volver al inicio de sesión
+            </Link>
+          </>
+        ) : (
+          <Text className="text-center text-stone-200">
+            Inicio de sesión completado. Redirigiendo...
           </Text>
-        </>
-      ) : error ? (
-        <>
-          <Text className="text-center text-stone-200">{error}</Text>
-          <Link href="/(auth)/login" className="mt-6 text-amber-400">
-            Volver al inicio de sesión
-          </Link>
-        </>
-      ) : (
-        <Text className="text-center text-stone-200">
-          Inicio de sesión completado. Redirigiendo...
-        </Text>
-      )}
+        )}
+      </View>
     </View>
   );
 }

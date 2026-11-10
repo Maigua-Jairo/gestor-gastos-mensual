@@ -54,3 +54,9 @@ Join our community of developers creating universal apps.
 
 - [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
 - [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+
+## Animaciones de estado
+
+Las animaciones Lottie de `assets/animaciones/` indican cargas de pantallas y datos, historiales vacíos, confirmaciones, inicio de sesión, depósitos y retiros de ahorro, y la configuración inicial del presupuesto. Las páginas de autenticación de Vercel también muestran carga y confirmación al verificar una cuenta o actualizar una contraseña.
+
+Después de instalar `lottie-react-native`, reconstruye el binario de desarrollo o producción para incluir el módulo nativo.

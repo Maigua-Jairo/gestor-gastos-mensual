@@ -4,15 +4,18 @@ import { supabase } from '../../lib/supabase';
 import { useMonthlyBudget } from '../../hooks/useMonthlyBudget';
 import { useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
+import { useAnimationFeedback } from '../../provider/AnimationFeedbackProvider';
+import { BackButton } from '../../components/BackButton';
 
 export default function AddExpenseScreen() {
   const currentDate = new Date();
   const currentYear = currentDate.getFullYear();
   const currentMonth = currentDate.getMonth() + 1;
 
-  const { activeMonth } = useMonthlyBudget(currentYear, currentMonth);
+  const { activeMonth, isLoading: isLoadingBudget } = useMonthlyBudget(currentYear, currentMonth);
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { showAnimation } = useAnimationFeedback();
 
   const [note, setNote] = useState('');
   const [amount, setAmount] = useState('');
@@ -23,7 +26,6 @@ export default function AddExpenseScreen() {
     { key: 'basic_needs', label: 'Necesidades Básicas' },
     { key: 'personal_needs', label: 'Necesidades Personales' },
     { key: 'luxuries', label: 'Lujos' },
-    { key: 'savings', label: 'Ahorro' },
   ];
 
   const handleAddExpense = async () => {
@@ -40,38 +42,45 @@ export default function AddExpenseScreen() {
 
     setLoading(true);
 
-    // 1. Obtener el usuario autenticado actual para satisfacer el RLS de Supabase
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+      if (!user) throw new Error('No se pudo identificar al usuario autenticado.');
 
-    if (userError || !user) {
-      setLoading(false);
-      Alert.alert('Error de Sesión', 'No se pudo identificar al usuario autenticado.');
-      return;
-    }
+      const { error } = await supabase.from('expenses').insert({
+        user_id: user.id,
+        month_id: activeMonth.id,
+        block: selectedBlock,
+        note: note.trim(),
+        amount: numericAmount,
+      });
+      if (error) throw error;
 
-    // 2. Insertar enviando explícitamente el user_id y la nota
-    const { error } = await supabase.from('expenses').insert({
-      user_id: user.id, // <-- Crítico para superar el RLS
-      month_id: activeMonth.id,
-      block: selectedBlock,
-      note: note.trim(),
-      amount: numericAmount,
-    });
-
-    setLoading(false);
-
-    if (error) {
-      Alert.alert('Error al registrar gasto', error.message);
-    } else {
       queryClient.invalidateQueries({ queryKey: ['budget_details'] });
-      Alert.alert('Éxito', 'Gasto registrado correctamente.', [
-        { text: 'OK', onPress: () => router.back() }
-      ]);
+      showAnimation('success', 'Gasto registrado correctamente.');
+      router.back();
+    } catch (error) {
+      Alert.alert(
+        'Error al registrar gasto',
+        error instanceof Error ? error.message : 'No se pudo registrar el gasto.',
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
+  if (isLoadingBudget) {
+    return (
+      <View className="flex-1 items-center justify-center bg-stone-950">
+        <ActivityIndicator size="large" color="#fbbf24" />
+        <Text className="mt-2 text-sm text-stone-400">Cargando el presupuesto...</Text>
+      </View>
+    );
+  }
+
   return (
     <ScrollView className="flex-1 bg-stone-950 px-6 pt-12">
+      <BackButton />
       <Text className="text-2xl font-bold text-amber-400 mb-1">Registrar Gasto</Text>
       <Text className="text-sm text-stone-400 mb-6">Asigna el consumo a uno de tus bloques presupuestarios.</Text>
 

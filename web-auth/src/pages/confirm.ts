@@ -1,6 +1,5 @@
 import { getSupabaseClient } from "../lib/supabase";
-
-const icon = `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" class="h-6 w-6"><path d="m5 12.5 4.5 4.5L19 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+import { playAnimation, renderLoadingAnimation } from "../lib/animation";
 
 function renderMessage(message: string, success: boolean) {
   const app = document.querySelector<HTMLDivElement>("#app");
@@ -19,9 +18,9 @@ function renderMessage(message: string, success: boolean) {
             <p class="mt-1 text-xs text-stone-400">Acceso seguro</p>
           </div>
         </div>
-        <div class="mb-5 grid h-12 w-12 place-items-center rounded-2xl ${success ? "bg-amber-400/10 text-amber-400" : "bg-stone-800 text-stone-400"}">
-          ${success ? icon : `<span aria-hidden="true" class="text-lg">!</span>`}
-        </div>
+        ${success
+          ? `<div id="success-animation" role="img" aria-label="Confirmación completada" class="mx-auto mb-5 h-40 w-40"></div>`
+          : `<div class="mb-5 grid h-12 w-12 place-items-center rounded-2xl bg-stone-800 text-stone-400"><span aria-hidden="true" class="text-lg">!</span></div>`}
         <h1 class="text-2xl font-semibold tracking-tight text-stone-50">${success ? "Cuenta confirmada" : "No se pudo confirmar"}</h1>
         <p class="mt-3 text-sm leading-6 text-stone-300">${message}</p>
         <div class="mt-8 border-t border-stone-800 pt-5">
@@ -30,9 +29,13 @@ function renderMessage(message: string, success: boolean) {
       </section>
     </main>
   `;
+
+  if (success) playAnimation("success-animation", "success");
 }
 
 export async function renderConfirmPage() {
+  renderLoadingAnimation("Confirmando tu cuenta...");
+
   const params = new URLSearchParams(window.location.search);
   const tokenHash = params.get("token_hash");
   const type = params.get("type");

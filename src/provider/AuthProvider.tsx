@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { useRouter, useSegments } from 'expo-router';
 import * as Linking from 'expo-linking';
 import { createSessionFromUrl } from '../lib/auth';
+import { useAnimationFeedback } from './AnimationFeedbackProvider';
 
 type AuthContextType = {
   session: Session | null;
@@ -20,6 +21,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   
   const segments = useSegments();
   const router = useRouter();
+  const { showAnimation } = useAnimationFeedback();
 
   useEffect(() => {
     // 1. Manejar deep links cuando la app recibe la redirección del navegador OAuth
@@ -52,17 +54,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     // 4. Suscribirse a cambios de estado de autenticación en tiempo real
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       setIsLoading(false);
+      if (event === 'SIGNED_IN') {
+        showAnimation('signIn', '¡Sesión iniciada correctamente!');
+      }
     });
 
     return () => {
       urlListener.remove();
       subscription.unsubscribe();
     };
-  }, []);
+  }, [showAnimation]);
 
   // 5. Protección y redirección de rutas con Expo Router
   useEffect(() => {
@@ -75,7 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } else if (session && inAuthGroup) {
       router.replace('/(main)');
     }
-  }, [session, segments, isLoading]);
+  }, [session, segments, isLoading, router]);
 
   const signOut = async () => {
     await supabase.auth.signOut();

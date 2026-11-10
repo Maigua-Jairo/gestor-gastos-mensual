@@ -3,12 +3,16 @@ import { Text, View, TextInput, TouchableOpacity, Alert, ActivityIndicator } fro
 import { supabase } from '../../lib/supabase';
 import { Link, useRouter } from 'expo-router';
 import { getAuthRedirectUrl } from '../../lib/auth';
+import { useAnimationFeedback } from '../../provider/AnimationFeedbackProvider';
+import { PasswordInput } from '../../components/PasswordInput';
+import { BackButton } from '../../components/BackButton';
 
 export default function RegisterScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { showAnimation } = useAnimationFeedback();
 
   const handleRegister = async () => {
     if (!email || !password) {
@@ -26,11 +30,11 @@ export default function RegisterScreen() {
       });
 
       if (error) throw error;
-      Alert.alert(
-        'Revisa tu correo',
-        'Te enviamos un enlace para confirmar tu cuenta. Al abrirlo, Vercel completará la confirmación.',
-        [{ text: 'OK', onPress: () => router.replace('/(auth)/login') }]
+      showAnimation(
+        'success',
+        'Te enviamos un enlace para confirmar tu cuenta. Revisa tu correo.',
       );
+      router.replace('/(auth)/login');
     } catch (error) {
       Alert.alert(
         'Error en Registro',
@@ -43,6 +47,7 @@ export default function RegisterScreen() {
 
   return (
     <View className="flex-1 justify-center bg-stone-950 px-6">
+      <BackButton fallbackHref="/(auth)/login" />
       <View className="mb-8">
         <Text className="text-3xl font-bold text-amber-400">Crear Cuenta</Text>
         <Text className="text-sm text-stone-400 mt-1">Registra tu correo institucional o personal</Text>
@@ -59,13 +64,13 @@ export default function RegisterScreen() {
           keyboardType="email-address"
         />
 
-        <TextInput
-          className="bg-stone-900 border border-stone-800 text-stone-100 px-4 py-3 rounded-xl mb-6"
+        <PasswordInput
+          containerClassName="mb-6 rounded-xl border border-stone-800 bg-stone-900 px-4"
+          className="py-3 text-stone-100"
           placeholder="Contraseña (mínimo 6 caracteres)"
           placeholderTextColor="#78716c"
           value={password}
           onChangeText={setPassword}
-          secureTextEntry
         />
 
         <TouchableOpacity

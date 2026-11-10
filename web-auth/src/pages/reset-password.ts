@@ -1,7 +1,6 @@
 import { getSupabaseClient } from "../lib/supabase";
 import type { SupabaseClient } from "@supabase/supabase-js";
-
-const checkIcon = `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" class="h-6 w-6"><path d="m5 12.5 4.5 4.5L19 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+import { playAnimation, renderLoadingAnimation } from "../lib/animation";
 
 function renderFrame(title: string, content: string) {
   const app = document.querySelector<HTMLDivElement>("#app");
@@ -41,10 +40,17 @@ function renderError(message: string) {
 function renderSuccess() {
   renderFrame(
     "Contraseña actualizada",
-    `<div class="mb-5 grid h-12 w-12 place-items-center rounded-2xl bg-amber-400/10 text-amber-400">${checkIcon}</div>
+    `<div id="success-animation" role="img" aria-label="Proceso completado" class="mb-5 h-40 w-40"></div>
      <h1 class="text-2xl font-semibold tracking-tight text-stone-50">Contraseña actualizada</h1>
      <p class="mt-3 text-sm leading-6 text-stone-300">Contraseña actualizada. Vuelve a la app e inicia sesión.</p>`,
   );
+  playAnimation("success-animation", "success");
+}
+
+function visibilityButton(targetId: string) {
+  return `<button type="button" data-password-target="${targetId}" aria-label="Mostrar contraseña" aria-pressed="false" class="absolute inset-y-0 right-2 grid w-11 place-items-center rounded-lg text-stone-400 hover:text-amber-400 focus-visible:outline-2 focus-visible:outline-amber-300">
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" class="h-5 w-5"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="12" r="2.7" stroke="currentColor" stroke-width="1.7"/></svg>
+  </button>`;
 }
 
 function renderForm(client: SupabaseClient) {
@@ -55,11 +61,17 @@ function renderForm(client: SupabaseClient) {
      <form id="reset-form" class="mt-7 space-y-5" novalidate>
        <div>
          <label for="password" class="mb-2 block text-sm font-medium text-stone-200">Nueva contraseña</label>
-         <input id="password" name="password" type="password" autocomplete="new-password" minlength="8" required class="w-full min-w-0 rounded-xl border border-stone-700 bg-stone-950 px-4 py-3 text-base text-stone-100 outline-none transition placeholder:text-stone-600 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20" placeholder="Al menos 8 caracteres" />
+         <div class="relative">
+           <input id="password" name="password" type="password" autocomplete="new-password" minlength="8" required class="w-full min-w-0 rounded-xl border border-stone-700 bg-stone-950 py-3 pl-4 pr-14 text-base text-stone-100 outline-none transition placeholder:text-stone-600 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20" placeholder="Al menos 8 caracteres" />
+           ${visibilityButton("password")}
+         </div>
        </div>
        <div>
          <label for="password-confirm" class="mb-2 block text-sm font-medium text-stone-200">Confirma tu contraseña</label>
-         <input id="password-confirm" name="password-confirm" type="password" autocomplete="new-password" minlength="8" required class="w-full min-w-0 rounded-xl border border-stone-700 bg-stone-950 px-4 py-3 text-base text-stone-100 outline-none transition placeholder:text-stone-600 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20" placeholder="Repite la contraseña" />
+         <div class="relative">
+           <input id="password-confirm" name="password-confirm" type="password" autocomplete="new-password" minlength="8" required class="w-full min-w-0 rounded-xl border border-stone-700 bg-stone-950 py-3 pl-4 pr-14 text-base text-stone-100 outline-none transition placeholder:text-stone-600 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20" placeholder="Repite la contraseña" />
+           ${visibilityButton("password-confirm")}
+         </div>
        </div>
        <p id="form-message" role="status" aria-live="polite" class="min-h-5 text-sm text-rose-300"></p>
        <button id="submit-button" type="submit" class="flex min-h-12 w-full items-center justify-center rounded-xl bg-amber-400 px-5 py-3 text-sm font-semibold text-stone-950 transition hover:bg-amber-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300 disabled:cursor-wait disabled:opacity-60">Actualizar contraseña</button>
@@ -74,6 +86,24 @@ function renderForm(client: SupabaseClient) {
   if (!form || !passwordInput || !confirmationInput || !message || !button) {
     throw new Error("No se pudo preparar el formulario de contraseña.");
   }
+
+  form.querySelectorAll<HTMLButtonElement>("[data-password-target]").forEach((toggle) => {
+    toggle.addEventListener("click", () => {
+      const targetId = toggle.dataset.passwordTarget;
+      const input = targetId ? document.getElementById(targetId) : null;
+      if (!(input instanceof HTMLInputElement)) {
+        throw new Error("No se encontró el campo de contraseña asociado.");
+      }
+
+      const isVisible = input.type === "text";
+      input.type = isVisible ? "password" : "text";
+      toggle.setAttribute("aria-label", isVisible ? "Mostrar contraseña" : "Ocultar contraseña");
+      toggle.setAttribute("aria-pressed", String(!isVisible));
+      toggle.innerHTML = isVisible
+        ? `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" class="h-5 w-5"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="12" r="2.7" stroke="currentColor" stroke-width="1.7"/></svg>`
+        : `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" class="h-5 w-5"><path d="m3 3 18 18M10.6 6.2A9.8 9.8 0 0 1 12 6c6 0 9.5 6 9.5 6a16 16 0 0 1-3.1 3.7M6.2 6.3C3.9 7.8 2.5 12 2.5 12s3.5 6 9.5 6c1 0 2-.2 2.8-.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    });
+  });
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -128,6 +158,8 @@ function renderForm(client: SupabaseClient) {
 }
 
 export async function renderResetPasswordPage() {
+  renderLoadingAnimation("Preparando la recuperación de tu contraseña...");
+
   const params = new URLSearchParams(window.location.search);
   const tokenHash = params.get("token_hash");
   const type = params.get("type");
