@@ -6,7 +6,6 @@ import { FeedbackAnimation } from '../../components/FeedbackAnimation';
 import { LoadingState, useLoadingAnimation } from '../../components/LoadingState';
 import { useAnimationFeedback } from '../../provider/AnimationFeedbackProvider';
 import { formatMonthLabel } from '../../lib/date-format';
-import { BackButton } from '../../components/BackButton';
 export default function DashboardScreen() {
   const currentDate = new Date();
   const currentYear = currentDate.getFullYear();
@@ -173,7 +172,6 @@ export default function DashboardScreen() {
 
   return (
     <ScrollView className="flex-1 bg-stone-950 px-6 pt-12 pb-10">
-      <BackButton />
       {/* Cabecera con enlace al Perfil */}
       <View className="flex-row justify-between items-center mb-6">
         <View>

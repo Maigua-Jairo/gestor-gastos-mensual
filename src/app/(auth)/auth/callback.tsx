@@ -16,7 +16,7 @@ export default function AuthCallbackScreen() {
     let active = true;
     createSessionFromUrl(url)
       .then(() => {
-        if (active) router.replace('/');
+        if (active) router.replace('/(main)');
       })
       .catch((cause: unknown) => {
         if (active) {

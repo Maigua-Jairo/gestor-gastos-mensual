@@ -13,7 +13,6 @@ import { Link } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { PasswordInput } from '../../components/PasswordInput';
 import { FeedbackAnimation } from '../../components/FeedbackAnimation';
-import { BackButton } from '../../components/BackButton';
 import { signInWithGoogle } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
 
@@ -70,7 +69,6 @@ export default function LoginScreen() {
       keyboardShouldPersistTaps="handled"
     >
       <View className="w-full max-w-md self-center">
-        <BackButton />
         <View className={`items-center ${isCompact ? 'mb-3' : 'mb-5'}`}>
           <FeedbackAnimation name="budget" size={isCompact ? 68 : 84} loop={false} />
           <Text className={`font-semibold uppercase tracking-[3px] text-amber-400 ${isCompact ? 'text-[10px]' : 'text-xs'}`}>

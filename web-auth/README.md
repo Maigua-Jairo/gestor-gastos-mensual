@@ -55,6 +55,13 @@ En **Authentication → URL Configuration → Redirect URLs**, añade la URL del
 https://<tu-app>.vercel.app/**
 ```
 
+El inicio de sesión con Google en la aplicación móvil **no usa Vercel**. Añade también el URI de retorno de la app a **Redirect URLs**:
+
+- En un development build o build instalado, el esquema configurado en `app.json` produce `migestorgastos://auth/callback`.
+- En Expo Go, ejecuta el login y copia el URI que aparece en la consola como `[AUTH] Google app redirect URI`. Expo Go genera un URI `exp://...` que puede cambiar según el host de Metro; permite ese URI exacto en Supabase.
+
+La URI autorizada en la configuración del cliente OAuth de Google debe seguir siendo el callback de Supabase (`https://<project-ref>.supabase.co/auth/v1/callback`), no la URL de Vercel ni el deep link de la app.
+
 Configura las plantillas en **Authentication → Email Templates** para que cada correo dirija a la ruta de Vercel indicada por la app y pase el token hash:
 
 - **Confirmación**: `{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=email`

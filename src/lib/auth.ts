@@ -5,6 +5,7 @@ import { supabase } from './supabase';
 WebBrowser.maybeCompleteAuthSession();
 
 let lastCode: string | null = null;
+let pendingCodeExchange: { code: string; promise: Promise<void> } | null = null;
 
 export function getAuthRedirectUrl(path: '/confirm' | '/reset-password') {
   const configuredUrl = process.env.EXPO_PUBLIC_AUTH_WEB_URL?.trim();
@@ -32,16 +33,30 @@ export function getAuthRedirectUrl(path: '/confirm' | '/reset-password') {
 export async function createSessionFromUrl(url: string) {
   const { queryParams } = Linking.parse(url);
   const code = queryParams?.code;
-  console.log('[AUTH] procesando URL:', url);
   if (typeof code === 'string') {
     if (code === lastCode) return;
-    lastCode = code;
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (error) throw error;
+    if (pendingCodeExchange?.code === code) {
+      await pendingCodeExchange.promise;
+      return;
+    }
+
+    const exchangePromise = (async () => {
+      const { error } = await supabase.auth.exchangeCodeForSession(code);
+      if (error) throw error;
+      lastCode = code;
+    })();
+    pendingCodeExchange = { code, promise: exchangePromise };
+
+    try {
+      await exchangePromise;
+    } finally {
+      if (pendingCodeExchange?.promise === exchangePromise) {
+        pendingCodeExchange = null;
+      }
+    }
     return;
   }
-const { data: s } = await supabase.auth.getSession();
-console.log('[AUTH] sesión activa:', !!s.session);
+
   // Respaldo por si devuelve tokens en el fragmento
   const fragment = url.split('#')[1];
   if (fragment) {
@@ -57,7 +72,10 @@ console.log('[AUTH] sesión activa:', !!s.session);
 
 export async function signInWithGoogle() {
   try {
-    const redirectTo = Linking.createURL('/auth/callback');
+    const redirectTo = Linking.createURL('auth/callback');
+    if (__DEV__) {
+      console.info('[AUTH] Google app redirect URI:', redirectTo);
+    }
 
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -74,17 +92,15 @@ export async function signInWithGoogle() {
     if (!data.url) throw new Error('Supabase no devolvió la URL de Google');
 
     // Abre el navegador OAuth
-const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
-console.log('[AUTH] resultado del navegador:', result.type, 'url' in result ? result.url : '');
+    const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+
     // Si el navegador devuelve la URL de éxito directamente, la procesamos
     if (result && result.type === 'success' && result.url) {
       await createSessionFromUrl(result.url);
     }
-  } catch (error: any) {
-    throw new Error(error.message || 'Ocurrió un error al iniciar sesión con Google.');
+  } catch (error) {
+    throw new Error(
+      error instanceof Error ? error.message : 'Ocurrió un error al iniciar sesión con Google.',
+    );
   }
-}
-
-function utilsVerifyResult(result: any) {
-  return result;
 }
