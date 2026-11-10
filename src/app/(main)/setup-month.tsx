@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { useAnimationFeedback } from '../../provider/AnimationFeedbackProvider';
 import { formatMonthLabel } from '../../lib/date-format';
 import { BackButton } from '../../components/BackButton';
+import { LoadingState, useLoadingAnimation } from '../../components/LoadingState';
 
 export default function SetupMonthScreen() {
   const currentDate = new Date();
@@ -12,6 +13,7 @@ export default function SetupMonthScreen() {
   const currentMonth = currentDate.getMonth() + 1; // 1 - 12
 
   const { budgetData, isLoading, setupMonth, isSettingUp } = useMonthlyBudget(currentYear, currentMonth);
+  const { showLoading, onLoadingStarted, onAnimationLoaded } = useLoadingAnimation(isLoading);
   const router = useRouter();
   const { showAnimation } = useAnimationFeedback();
 
@@ -73,12 +75,14 @@ export default function SetupMonthScreen() {
     }
   };
 
-  if (isLoading) {
+  if (showLoading) {
     return (
-      <View className="flex-1 items-center justify-center bg-stone-950">
-        <ActivityIndicator size="large" color="#fbbf24" />
-        <Text className="mt-2 text-sm text-stone-400">Cargando tu presupuesto...</Text>
-      </View>
+      <LoadingState
+        screenKey="budget-setup"
+        message="Cargando tu presupuesto..."
+        onLoadingStarted={onLoadingStarted}
+        onAnimationLoaded={onAnimationLoaded}
+      />
     );
   }
 

@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAnimationFeedback } from '../../provider/AnimationFeedbackProvider';
 import { BackButton } from '../../components/BackButton';
+import { LoadingState, useLoadingAnimation } from '../../components/LoadingState';
 
 export default function AddExpenseScreen() {
   const currentDate = new Date();
@@ -13,6 +14,7 @@ export default function AddExpenseScreen() {
   const currentMonth = currentDate.getMonth() + 1;
 
   const { activeMonth, isLoading: isLoadingBudget } = useMonthlyBudget(currentYear, currentMonth);
+  const { showLoading, onLoadingStarted, onAnimationLoaded } = useLoadingAnimation(isLoadingBudget);
   const router = useRouter();
   const queryClient = useQueryClient();
   const { showAnimation } = useAnimationFeedback();
@@ -69,12 +71,14 @@ export default function AddExpenseScreen() {
     }
   };
 
-  if (isLoadingBudget) {
+  if (showLoading) {
     return (
-      <View className="flex-1 items-center justify-center bg-stone-950">
-        <ActivityIndicator size="large" color="#fbbf24" />
-        <Text className="mt-2 text-sm text-stone-400">Cargando el presupuesto...</Text>
-      </View>
+      <LoadingState
+        screenKey="add-expense"
+        message="Cargando el presupuesto..."
+        onLoadingStarted={onLoadingStarted}
+        onAnimationLoaded={onAnimationLoaded}
+      />
     );
   }
 

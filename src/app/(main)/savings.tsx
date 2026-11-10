@@ -3,7 +3,7 @@ import { Text, View, TextInput, TouchableOpacity, Alert, ActivityIndicator, Scro
 import { supabase } from '../../lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { FeedbackAnimation } from '../../components/FeedbackAnimation';
-import { LoadingState } from '../../components/LoadingState';
+import { LoadingState, useLoadingAnimation } from '../../components/LoadingState';
 import { useAnimationFeedback } from '../../provider/AnimationFeedbackProvider';
 import { formatDateLabel } from '../../lib/date-format';
 import { BackButton } from '../../components/BackButton';
@@ -35,6 +35,7 @@ export default function SavingsScreen() {
       return data;
     },
   });
+  const { showLoading, onLoadingStarted, onAnimationLoaded } = useLoadingAnimation(isLoading);
 
   // Calcular el balance total de ahorros
   const totalSavings = savingsData.reduce((acc: number, item: any) => {
@@ -42,8 +43,15 @@ export default function SavingsScreen() {
     return item.type === 'deposit' ? acc + val : acc - val;
   }, 0);
 
-  if (isLoading) {
-    return <LoadingState screenKey="savings" message="Cargando tus ahorros..." />;
+  if (showLoading) {
+    return (
+      <LoadingState
+        screenKey="savings"
+        message="Cargando tus ahorros..."
+        onLoadingStarted={onLoadingStarted}
+        onAnimationLoaded={onAnimationLoaded}
+      />
+    );
   }
 
   const handleSaveMovement = async () => {

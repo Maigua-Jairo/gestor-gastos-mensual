@@ -3,7 +3,7 @@ import { ActivityIndicator, Alert, Modal, Pressable, Text, View, ScrollView, Tou
 import { useMonthlyBudget } from '../../hooks/useMonthlyBudget';
 import { useRouter, Link } from 'expo-router';
 import { FeedbackAnimation } from '../../components/FeedbackAnimation';
-import { LoadingState } from '../../components/LoadingState';
+import { LoadingState, useLoadingAnimation } from '../../components/LoadingState';
 import { useAnimationFeedback } from '../../provider/AnimationFeedbackProvider';
 import { formatMonthLabel } from '../../lib/date-format';
 import { BackButton } from '../../components/BackButton';
@@ -22,6 +22,7 @@ export default function DashboardScreen() {
     setupMonth,
     isSettingUp,
   } = useMonthlyBudget(currentYear, currentMonth);
+  const { showLoading, onLoadingStarted, onAnimationLoaded } = useLoadingAnimation(isLoading);
   const router = useRouter();
   const { showAnimation } = useAnimationFeedback();
   const [monthChoiceDismissed, setMonthChoiceDismissed] = useState(false);
@@ -61,8 +62,15 @@ export default function DashboardScreen() {
     }
   };
 
-  if (isLoading) {
-    return <LoadingState screenKey="dashboard" message="Cargando tu presupuesto..." />;
+  if (showLoading) {
+    return (
+      <LoadingState
+        screenKey="dashboard"
+        message="Cargando tu presupuesto..."
+        onLoadingStarted={onLoadingStarted}
+        onAnimationLoaded={onAnimationLoaded}
+      />
+    );
   }
 
   // Si el mes no ha sido configurado, mostrar opción para ir al setup

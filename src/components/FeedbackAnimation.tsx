@@ -11,6 +11,7 @@ type FeedbackAnimationProps = {
   size?: number;
   loop?: boolean;
   onAnimationFinish?: (isCancelled: boolean) => void;
+  onAnimationLoaded?: () => void;
 };
 
 export function FeedbackAnimation({
@@ -18,6 +19,7 @@ export function FeedbackAnimation({
   size = 180,
   loop = name === 'loading',
   onAnimationFinish,
+  onAnimationLoaded,
 }: FeedbackAnimationProps) {
   return (
     <View
@@ -31,6 +33,7 @@ export function FeedbackAnimation({
         loop={loop}
         speed={feedbackAnimationSpeeds[name]}
         onAnimationFinish={onAnimationFinish}
+        onAnimationLoaded={onAnimationLoaded}
         style={{ width: size, height: size }}
         resizeMode="contain"
       />
